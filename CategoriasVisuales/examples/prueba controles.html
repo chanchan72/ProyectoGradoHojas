@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - geometry - catmull spline editor</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	</head>
+	<body>
+		<div id="container"></div>
+		<script src="../build/three.js"></script>
+		<script src="js/controls/DragControls.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/controls/TransformControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script src="js/libs/dat.gui.min.js"></script>
+		<script>
+			var container, stats;
+			var camera, scene, renderer;
+			var splineHelperObjects = [];
+			var positions = [];
+			var geometry = new THREE.SphereGeometry( 40, 40, 40 );
+			var transformControl;
+			init();
+			animate();
+			function init() {
+				container = document.getElementById( 'container' );
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0xf0f0f0 );
+				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.set( 0, 250, 1000 );
+				scene.add( camera );
+				scene.add( new THREE.AmbientLight( 0xf0f0f0 ) );
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				container.appendChild( renderer.domElement );				
+				transformControl = new THREE.TransformControls( camera, renderer.domElement );
+				transformControl.addEventListener( 'change', render );
+				scene.add( transformControl );
+				var dragcontrols = new THREE.DragControls( splineHelperObjects, camera, renderer.domElement ); //
+				dragcontrols.enabled = false;
+				dragcontrols.addEventListener( 'hoveron', function ( event ) {
+					transformControl.attach( event.object );
+					cancelHideTransorm();
+				} );
+				var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+				var material2 = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+				var material3 = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+				var object = new THREE.Mesh( geometry, material );
+				scene.add( object );
+				var geometry2 = new THREE.SphereGeometry( 40, 40, 40 );
+				var geometry3 = new THREE.SphereGeometry( 40, 40, 40 );
+				var object2 = new THREE.Mesh( geometry2, material2 );
+				var object3 = new THREE.Mesh( geometry3, material3 );
+				scene.add( object2 );
+				scene.add( object3 );
+				
+				splineHelperObjects.push( object );
+				splineHelperObjects.push( object2 );
+				splineHelperObjects.push( object3 );
+			}
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+			function render() {
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
+</html>

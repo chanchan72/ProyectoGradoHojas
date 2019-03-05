@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Proyecto Hojas U Central</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+            body {
+                font-family: Monospace;
+                background-color: #f0f0f0;
+                margin: 0px;
+                overflow: hidden;
+            }
+
+            #topmenu {
+                position: absolute;
+                bottom: 5px;
+                right: 5px;
+                width: 100%;
+                text-align: right;
+                padding: 0;
+                margin: 0;
+                z-index: 1;
+            }
+            .info2 {
+                position: absolute;
+                opacity: 0.8;
+                color: blue;
+                text-align: center;
+                bottom: 25px;
+                width: 30%;
+            }
+
+            .info a {
+                color: #00ffff;
+            }
+            button {
+                color: rgb(155,155,155);
+                background: transparent;
+                border: 0px;
+                padding: 2px 3px;
+                cursor: pointer;
+            }
+            button:hover {
+                background-color: rgba(255,192,102,0.5);
+            }
+            button:active {
+                color: #000000;
+                background-color: rgba(0,255,255,0.85);
+            }
+            label{
+                color: rgb(12,84,122,0.9);
+                background-color: rgba(222,218,202,0.5);
+                font-size: 30px;
+                font-weight: bold;
+                padding: 20px 20px;
+            }
+
+            .bond {
+                width: 5px;
+                height: 10px;
+                background: #eee;
+                display: block;
+            }
+		</style>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/modules/series-label.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/modules/export-data.js"></script>
+	</head>
+	<body>
+
+		<div class="info2">
+            <div id="container2" style="min-width: 310px; height: 300px; max-width: 700px; margin: 0 auto"></div>
+        </div>
+		
+		<div id="container"></div>
+        <div id="topmenu">
+            <button id="up_rad">Rad++</button>
+            <button id="dw_rad">Rad--</button>
+            <button id="leaf">Leaf</button>
+            <button id="lx">Lines</button>
+            <label id="h0">H0 180</label>
+        </div>
+
+		<script src="../build/three.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+        <script src="js/libs/stats.min.js"></script>
+        <script src="clef30b.js"></script>
+		<script src='js/libs/dat.gui.min.js'></script>
+		<script src="js/controls/DragControls.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/controls/TransformControls.js"></script>
+		
+		
+		
+		
+		<script>
+			var ArchivoGeneral;
+			var color123 = [];
+			var container, stats;
+			var camera, controls, scene, spotlight;
+			var cameraOrtho, sceneOrtho;
+			var pickingData = [], pickingTexture, pickingScene;
+            var group;
+            var gsphere;
+            var glines;
+			var dist;
+			var N;
+			var label;
+            var categ;
+            var categ2;
+            var cluster;
+            var factor=0.1;
+            var gRad=0.1;
+            var ngroups;
+            var ngroups1;
+            var eqRad = 0;
+            var graph = [];
+            var graph1 = [];
+			var mouse = new THREE.Vector2();
+			var offset = new THREE.Vector3( 10, 10, 10 );
+			
+			var transformControl;
+			
+			var renderer;
+			var renderer1;
+			var splineHelperObjects = [];
+			
+            var out = document.getElementById("h0");
+            var gra = document.getElementById("container2");
+            var up_rad = document.getElementById("up_rad");
+            var dw_rad = document.getElementById("dw_rad");
+            var leaf = document.getElementById("leaf");
+            var lx = document.getElementById("lx");
+            var gf = false;
+			
+			var transformControl;
+			// custom global variables
+			var cube;
+			var parameters;
+			var gui;
+			var referencia = 0;
+			
+			var splineHelperObjects = [];
+			var positions = [];
+			var transformControl;
+			
+			
+			var pointclouds;
+			var raycaster;
+			var mouse = new THREE.Vector2();
+			var intersection = null;
+			var spheres = [];
+			var spheresIndex = 0;
+			var clock;
+			var threshold = 0.1;
+			var pointSize = 0.05;
+			var width = 80;
+			var length = 160;
+			var rotateY = new THREE.Matrix4().makeRotationY( 0.005 );
+			
+			mouse = { x : 0, y : 0 };
+            up_rad.addEventListener('click', function(){changeRadius(1);});
+            dw_rad.addEventListener('click', function(){changeRadius(0);});
+            leaf.addEventListener('click', function(){group.visible = !group.visible; gf=!gf;});
+            lx.addEventListener('click', function(){gsphere.visible = !gsphere.visible; glines.visible = !glines.visible;});
+            
+            init();
+            animate();           
+			//initGui();
+			
+			function init(){
+				container = document.getElementById("container");//Toma el div container y lo guarda en una variable 
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);//Ajuste de la camara segun la pantalla 
+				camera.position.z = 5;//Ubicacion de la camara en posicion Z
+				camera.position.x = 0;//Ubicacion de la camara en posicion X
+				camera.position.y = 0;//Ubicacion de la camara en posicion Y
+				controls = new THREE.TrackballControls( camera );//Controles de la camara
+				controls.rotateSpeed = 1.0;//Velocidad de rotación. El valor predeterminado es 1.
+				controls.zoomSpeed = 1.2;//Velocidad de zoom / dollying. El valor predeterminado es 1.
+				controls.panSpeed = 0.8;//Velocidad de paneo. El valor predeterminado es 1.
+				controls.noZoom = false;//
+				controls.noPan = false;//
+				controls.staticMoving = true;//
+				controls.dynamicDampingFactor = 0.3;//
+				scene = new THREE.Scene();//Las escenas le permiten configurar qué y dónde se representará con three.js. Aquí es donde colocas objetos, luces y cámaras.
+				scene.background = new THREE.Color( 0xffffff );//Si no es nulo, establece el fondo utilizado al renderizar la escena, y siempre se procesa primero. Se puede establecer en un Color que establece el color claro, una Textura que cubre el lienzo o un mapa de cubos como CubeTexture o WebGLRenderTargetCube . El valor predeterminado es nulo.		
+				pickingScene = new THREE.Scene();
+				pickingTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+				pickingTexture.texture.minFilter = THREE.LinearFilter;
+
+				scene.add(new THREE.AmbientLight(0x555555));
+				clock = new THREE.Clock();
+                var light = new THREE.SpotLight(0x448888, 1.5);
+                light.position.set(0, 500, 2000);
+                scene.add( light );
+				
+                
+                var light2 = new THREE.SpotLight(0xcc8844, 1.5);
+                light2.position.set(0, -500, -2000);
+                scene.add(light2);
+                
+                group = new THREE.Group();
+                gsphere = new THREE.Group();
+                glines = new THREE.Group();
+                scene.add(group);
+                scene.add(gsphere);
+                scene.add(glines);
+
+				var gridHelper = new THREE.GridHelper( 10, 50 );
+				scene.add( gridHelper );
+				
+				
+				
+				
+				
+				var geometry = new THREE.Geometry(),
+				pickingGeometry = new THREE.Geometry(),
+				pickingMaterial = new THREE.MeshBasicMaterial( { vertexColors: THREE.VertexColors } ),
+				defaultMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, vertexColors: THREE.VertexColors, shininess: 0	} );
+				
+				function addLineShape(shape, color, x, y, z, rx, ry, rz, s){
+					shape.autoClose = true;
+					var points = shape.getPoints();
+					var geometryPoints = new THREE.BufferGeometry().setFromPoints( points );
+					var line = new THREE.Line( geometryPoints, new THREE.LineBasicMaterial( { color: color, linewidth: 3 } ) );
+					line.position.set(x, y, z);
+					line.scale.set(s, s, s);
+					group.add(line);
+				}
+				
+				var axes = new THREE.AxisHelper(1);
+                scene.add(axes);
+				
+				var planeGeometry = new THREE.PlaneBufferGeometry( 2000, 2000 );
+				planeGeometry.rotateX( - Math.PI / 2 );
+				var planeMaterial = new THREE.ShadowMaterial( { opacity: 0.2 } );
+				var plane = new THREE.Mesh( planeGeometry, planeMaterial );
+				plane.position.y = -200;
+				plane.receiveShadow = true;
+				scene.add( plane );
+	
+	
+				
+				///////////////////////
+				
+				
+                
+                N = rad.length;//numero de radios 
+
+				dist = new Array(N*N);
+				label = new Array(N*N);
+                categ = new Array(N);
+                categ2 = new Array(N);
+                cluster = new Array(N);
+                ngroups = N;
+                ngroups1 = N;
+                graph.push([factor, ngroups]);
+                graph1.push([factor*0.25, ngroups1]);
+				
+                for(var i=0; i<N; i++)                                  //To calculate euclidean distance matrix
+                    for(var j=0; j<N; j++)
+                        dist[i*N+j] = Math.sqrt((coef[i*3+0]-coef[j*3+0])*(coef[i*3+0]-coef[j*3+0]) + 
+                                           (coef[i*3+1]-coef[j*3+1])*(coef[i*3+1]-coef[j*3+1]) + 
+                                           (coef[i*3+2]-coef[j*3+2])*(coef[i*3+2]-coef[j*3+2]));
+                  
+                
+                for(var i = 0; i<N; i++){
+                    color123.push(Math.random() * 0xbcbcbc);
+                    categ[i] = i;
+                    categ2[i] = i;
+                    cluster[i] = i;
+                }
+				
+
+				
+                for(var i=0; i<N; i++){
+                
+                    var contourPts = [];
+                    var geometryhh = new THREE.SphereGeometry(rad[i], 32, 32);
+					var materialhh = new THREE.MeshPhongMaterial({color: color123[i]});
+					var sphere = new THREE.Mesh(geometryhh, materialhh);
+					
+					
+					
+					
+					sphere.position.set(coef[i*3], coef[i*3+1], coef[i*3+2]);
+                    gsphere.add(sphere);
+					splineHelperObjects.push( sphere );
+					
+					
+					for(var j = i*1000; j < (i+1)*1000; j=j+2){
+						contourPts.push( new THREE.Vector2(contour[j], contour[j+1]));
+					}
+				
+					for(var k = 0; k < contourPts.length; k++)
+                        contourPts[k].multiplyScalar(0.00025);
+				
+					var shape = new THREE.Shape(contourPts);
+					/////////////sprite  
+					var crateMaterial = new THREE.SpriteMaterial( {  color: 0xff0000 } );
+					//var sprite2 = new THREE.Sprite( crateMaterial );
+					//sprite2.position.set(coef[i*3], coef[i*3+1], coef[i*3+2]);
+					//sprite2.scale.set( 0.08, 0.08, 0.08 ); // imageWidth, imageHeight
+					//scene.add( sprite2 );
+					/////////////
+					
+					
+                    shape.autoClose = true;
+                    var points = shape.getPoints();
+                    var geometryPoints = new THREE.BufferGeometry().setFromPoints(points);
+                    var line = new THREE.Line(geometryPoints, new THREE.LineBasicMaterial({color: color123[i], linewidth: 3}));
+                    line.position.set(coef[i*3], coef[i*3+1], coef[i*3+2]);
+                    //line.scale.set(s, s, s);
+                    group.add(line);
+                    
+                    for(var j=0; j<N; j++){
+                        var geomLines = new THREE.Geometry();
+                        geomLines.vertices.push(new THREE.Vector3(coef[i*3], coef[i*3+1], coef[i*3+2]));
+                        geomLines.vertices.push(new THREE.Vector3(coef[j*3], coef[j*3+1], coef[j*3+2]));                            
+                        var matLines = new THREE.LineBasicMaterial({color: color123[i], linewidth: 3});
+                        var sline = new THREE.Line(geomLines, matLines);
+                        sline.visible = false;
+                        glines.add(sline);
+                    }
+				}
+				glines.visible = true;
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				//container.appendChild( renderer.domElement );
+
+				renderer.domElement.addEventListener( 'mousemove', onMouseMove );
+				
+				//renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.shadowMap.enabled = true;
+				container.appendChild( renderer.domElement );				
+				transformControl = new THREE.TransformControls( camera, renderer.domElement );
+				transformControl.addEventListener( 'change', render );
+				scene.add( transformControl );
+				var dragcontrols = new THREE.DragControls( splineHelperObjects, camera, renderer.domElement ); //
+				dragcontrols.enabled = false;
+				dragcontrols.addEventListener( 'hoveron', function ( event ) {
+					transformControl.attach( event.object );
+					cancelHideTransorm();
+				} );
+	
+				
+				
+				
+                window.addEventListener( 'resize', onWindowResize, false );
+				window.addEventListener('keydown', function(event) {
+                    switch ( event.keyCode ) {
+                        case 81: // Q
+                            gsphere.visible = !gsphere.visible;
+                            glines.visible = !glines.visible;
+                            break;
+                        case 17: // Ctrl
+                            //control.setTranslationSnap( 100 );
+                            //control.setRotationSnap( THREE.Math.degToRad( 15 ) );
+                            break;
+                        case 87: // W
+                            changeRadius(1);
+                            break;
+                        case 69: // E
+                            //factor /= 1.05;
+                            changeRadius(0);
+                            break;
+                        case 82: // R
+                            eqRad = !eqRad;
+                            break;
+                        case 72: // H
+                            group.visible = !group.visible;
+                            break;
+                        case 187:
+                        case 107: // +, =, num+
+                            //control.setSize( control.size + 0.1 );
+                            break;
+                        case 189:
+                        case 109: // -, _, num-
+                            //control.setSize( Math.max( control.size - 0.1, 0.1 ) );
+                            break;
+                    }
+                });
+				
+				
+				
+				raycaster = new THREE.Raycaster();
+				renderer.domElement.addEventListener( 'click', raycast, false );
+				
+
+
+				
+			}
+
+			//
+
+			function onMouseMove(e){
+				mouse.x = e.clientX;
+				mouse.y = e.clientY;
+			}
+
+			
+			
+			function raycast ( e ) {
+
+				//1. sets the mouse position with a coordinate system where the center
+				//   of the screen is the origin
+				mouse.x = ( e.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+
+				//2. set the picking ray from the camera position and mouse coordinates
+				raycaster.setFromCamera( mouse, camera );    
+
+				//3. compute intersections
+				var intersects = raycaster.intersectObjects( scene.children );
+
+				for ( var i = 0; i < intersects.length; i++ ) {
+					console.log( intersects[ i ] ); 
+					/*
+						An intersection has the following properties :
+							- object : intersected object (THREE.Mesh)
+							- distance : distance from camera to intersection (number)
+							- face : intersected face (THREE.Face3)
+							- faceIndex : intersected face index (number)
+							- point : intersection point (THREE.Vector3)
+							- uv : intersection point in the object's UV coordinates (THREE.Vector2)
+					*/
+					rollOverMesh.position.copy( intersect.point ).add( intersect.face.normal );
+					rollOverMesh.position.divideScalar( 50 ).floor().multiplyScalar( 50 ).addScalar( 25 );
+				}
+			}
+			
+			function animate(){
+				requestAnimationFrame(animate);
+				var rt = 0.01, j=0;
+				for(var i=0; i<N; i++){
+                    //group.children[i].rotation.y += rt;
+                    gsphere.children[i].scale.set(factor, factor, factor);
+                    group.children[i].material.color = new THREE.Color(color123[categ2[i]]);
+                    gsphere.children[i].material.color = new THREE.Color(color123[categ2[i]]);
+                    //rt += 0.005;
+                    j++;
+                    //if(j>=10){rt=0.01; j=0;}
+                }
+                j=0;
+                out.innerText  = "H0 " + ngroups;
+                //out.value += "Radius factor: " + factor + "\n";
+                if(gf)
+                    gra.style.visibility = "hidden"; 
+                else 
+                    gra.style.visibility = "visible";
+                    
+				render();
+				
+			}
+			var toggle = 0;
+			function render(){
+				
+				controls.update();
+				renderer.render(scene, camera);
+				
+				
+			}
+			
+            function CrearGrafico(){
+                gra.innerHTML="";
+                graph.push([factor, ngroups]);
+                graph1.push([factor*0.25, ngroups1]);
+                Highcharts.chart('container2', {chart: {type: 'line', }, title: {text: 'Number of clusters per factor'},
+                    xAxis: {reversed: false, title: {enabled: true, text: 'Radius factor'}, maxPadding: 0.05, showLastLabel: true},
+                    yAxis: {title: {text: 'Clusters'}, lineWidth: 2}, legend: {enabled: false},
+                    plotOptions: {spline: {marker: {enable: false}}},
+                    
+                    tooltip: {headerFormat: '<b>{series.name}</b><br />', pointFormat: 'factor = {point.x}, Cluster = {point.y}'},
+                    
+                    series: [{name: 'Alpha', data: graph},{name: 'Same radius', color: 'red', data: graph1}]
+                });
+            }
+			
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+			
+			
+            function renderLines(){
+                for(var i=0; i<N; i++)
+                    for(var j=i+1; j<N; j++)
+                        if(label[i*N+j]){
+                            glines.children[i*N+j].material.color = new THREE.Color(color123[categ2[i]]);
+                            glines.children[i*N+j].visible = true;
+                        }
+                        else
+                            glines.children[i*N+j].visible = false;
+            }
+            
+			function changeRadius(up){
+                var  f, i, j;
+                if(up==1) f = 1.05;
+                else   f = 1.0/1.05;
+                factor *= f;
+                
+                for(i=0; i<N; i++)
+                    for(j=0; j<N; j++){
+                        label[i*N+j] = 0;
+                        if(i==j || factor*(rad[i]+rad[j])>=dist[i*N+j])
+                                label[i*N+j] = i+1;
+                    }
+
+                for(j=0; j<N; j++){
+                    var val=N;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < val) val=label[i*N+j];
+                    categ2[j] = val;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0) 
+                                for(k=0; k<N; k++)
+                                    if(label[i*N+k] != 0)
+                                        label[i*N+k] = val;
+                }
+                for(j=0; j<N; j++){
+                    var val=N;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < val) val=label[i*N+j];
+                    categ2[j] = val;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0) 
+                                for(k=0; k<N; k++)
+                                    if(label[i*N+k] != 0)
+                                        label[i*N+k] = val;
+                }
+                for(j=0; j<N; j++)
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < categ2[j]) categ2[j]=label[i*N+j];
+
+                var aux=1; // u: vector unique categories
+                cluster[0] = categ2[0];
+                for(var i=1; i<N; i++){
+                    var b=1;
+                    for(var k=0; k<aux; k++)
+                        if(categ2[i]==cluster[k]){
+                                b=0;
+                                break;
+                        }
+                    if(b){
+                        cluster[aux] = categ2[i];
+                        aux++;
+                    }
+                }
+                ngroups = aux;
+                renderLines();
+                changeRadius2();
+                CrearGrafico();
+			}
+
+            function changeRadius2(){
+                var  f, i, j;
+                
+                for(i=0; i<N; i++)
+                    for(j=0; j<N; j++){
+                        label[i*N+j] = 0;
+                        if(i==j || 0.25*factor>=dist[i*N+j])
+                                label[i*N+j] = i+1;
+                    }
+
+                for(j=0; j<N; j++){
+                    var val=N;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < val) val=label[i*N+j];
+                    categ[j] = val;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0) 
+                                for(k=0; k<N; k++)
+                                    if(label[i*N+k] != 0)
+                                        label[i*N+k] = val;
+                }
+                for(j=0; j<N; j++){
+                    var val=N;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < val) val=label[i*N+j];
+                    categ[j] = val;
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0) 
+                                for(k=0; k<N; k++)
+                                    if(label[i*N+k] != 0)
+                                        label[i*N+k] = val;
+                }
+                for(j=0; j<N; j++)
+                    for(i=0; i<N; i++)
+                        if(label[i*N+j] != 0 && label[i*N+j] < categ[j]) categ[j]=label[i*N+j];
+
+                var aux=1; // u: vector unique categories
+                cluster[0] = categ[0];
+                for(var i=1; i<N; i++){
+                    var b=1;
+                    for(var k=0; k<aux; k++)
+                        if(categ[i]==cluster[k]){
+                                b=0;
+                                break;
+                        }
+                    if(b){
+                        cluster[aux] = categ[i];
+                        aux++;
+                    }
+                }
+                ngroups1 = aux;
+            }
+		</script>
+
+	</body>
+</html>
+
